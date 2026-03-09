@@ -9,27 +9,11 @@ import io.swagger.v3.oas.models.info.Info;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * ✅ WHAT IS THIS?
- * A Spring Configuration class — it defines Beans that Spring manages.
- *
- * ✅ WHAT IS A BEAN?
- * A Bean is just an object managed by the Spring IoC (Inversion of Control) container.
- * When you annotate a method with @Bean, Spring calls it once on startup and stores
- * the returned object. Any class that needs it gets it injected automatically.
- *
- * ✅ WHY CONFIGURE ObjectMapper HERE?
- * The default ObjectMapper works fine, but we want to:
- * 1. Handle Java 8 date/time types (LocalDateTime, etc.)
- * 2. Make JSON output pretty-printed (optional, can disable in prod)
- *
- * ✅ @Configuration tells Spring: "This class contains @Bean definitions"
- */
 @Configuration
 public class AppConfig {
 
     /**
-     * ✅ Configures Jackson's ObjectMapper for JSON serialization.
+     * Configures Jackson's ObjectMapper for JSON serialization.
      *
      * ObjectMapper is used throughout our service to:
      * - Convert record Map → JSON string (for DB storage)

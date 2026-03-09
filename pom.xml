@@ -92,6 +92,34 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!--
+                ✅ FIX FOR "cannot find symbol builder()" IN VS CODE
+                This explicitly tells the Java compiler to run Lombok's
+                annotation processor, which generates the builder() method,
+                getters, setters, etc. at compile time.
+
+                WHY THIS IS NEEDED:
+                Lombok works via Java's "Annotation Processing" feature.
+                Without this, the compiler doesn't know to run Lombok,
+                so @Builder never generates the builder() method.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    <annotationProcessorPaths>
+                        <!-- Lombok must be listed here so the compiler runs it -->
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.30</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

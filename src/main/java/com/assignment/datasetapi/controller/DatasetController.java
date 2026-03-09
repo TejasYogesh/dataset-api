@@ -18,25 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * ✅ WHAT IS THIS?
- * The REST Controller — the entry point for all HTTP requests.
- * It handles routing, extracts inputs, delegates to the service, and returns responses.
- *
- * ✅ CONTROLLER RESPONSIBILITIES (and what it does NOT do):
- * ✅ Does: Parse HTTP request (path vars, query params, request body)
- * ✅ Does: Call the service layer
- * ✅ Does: Return appropriate HTTP status codes
- * ❌ Does NOT: Contain business logic (that belongs in the Service)
- * ❌ Does NOT: Talk to the database (that belongs in the Repository)
- *
- * ✅ ANNOTATIONS EXPLAINED:
- * @RestController  = @Controller + @ResponseBody → returns JSON automatically
- * @RequestMapping  = base URL prefix for all endpoints in this class
- * @RequiredArgsConstructor = Lombok constructor injection
- * @Slf4j           = Lombok logger
- * @Tag             = Swagger UI grouping label
- */
 @RestController
 @RequestMapping("/api/dataset")
 @RequiredArgsConstructor
@@ -46,21 +27,6 @@ public class DatasetController {
 
     // ✅ Injected via constructor — depends on INTERFACE, not implementation (SOLID)
     private final DatasetService datasetService;
-
-    // ─────────────────────────────────────────────────────────────
-    // POST /api/dataset/{datasetName}/record
-    // INSERT RECORD API
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * ✅ @PostMapping: handles HTTP POST requests
-     * ✅ @PathVariable: extracts {datasetName} from the URL path
-     * ✅ @RequestBody: deserializes the JSON body into InsertRecordRequest
-     * ✅ ResponseEntity<T>: gives full control over HTTP status + body
-     *
-     * ✅ HTTP 201 Created is the correct status for successful resource creation
-     * (not 200 OK — that's for successful reads/updates)
-     */
     @PostMapping("/{datasetName}/record")
     @Operation(
         summary = "Insert a JSON record into a dataset",
@@ -87,26 +53,10 @@ public class DatasetController {
 
         InsertRecordResponse response = datasetService.insertRecord(datasetName, request);
 
-        // ✅ 201 CREATED = semantically correct for a new resource being created
+        // 201 CREATED = semantically correct for a new resource being created
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // GET /api/dataset/{datasetName}/query
-    // QUERY API (Group-By or Sort-By)
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * ✅ @GetMapping: handles HTTP GET requests
-     * ✅ @RequestParam: extracts query parameters from the URL
-     *   - required = false: parameter is optional
-     *   - defaultValue: used when parameter is absent
-     *
-     * ✅ Why use @ModelAttribute for QueryParams?
-     * Spring automatically maps matching query params to the object's fields.
-     * ?groupBy=department&sortBy=age&order=desc → QueryParams{groupBy="department",...}
-     * This is cleaner than having 3 separate @RequestParam arguments.
-     */
     @GetMapping("/{datasetName}/query")
     @Operation(
         summary = "Query records from a dataset",
@@ -132,7 +82,7 @@ public class DatasetController {
 
         log.info("GET /api/dataset/{}/query groupBy={} sortBy={} order={}", datasetName, groupBy, sortBy, order);
 
-        // ✅ Build QueryParams object cleanly
+        // Build QueryParams object cleanly
         QueryParams params = new QueryParams();
         params.setGroupBy(groupBy);
         params.setSortBy(sortBy);
