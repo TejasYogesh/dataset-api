@@ -1,36 +1,50 @@
-# Dataset API — Spring Boot Assignment
+# Dataset API — Spring Boot
 
-A RESTful API for inserting and querying JSON records with Group-By and Sort-By operations.
+A RESTful Spring Boot application that stores schema-free JSON records and supports dynamic **Group-By** and **Sort-By** query operations on any field.
 
 ---
 
-## 🚀 How to Run
+## 💡 Problem & Approach
 
-### Prerequisites
-- Java 17+
-- Maven 3.6+ (or use the included `mvnw` wrapper)
+The challenge here is that JSON records are **schema-free** — an `employee_dataset` record might have `name`, `age`, `department`, while a `sales_dataset` record might have `product`, `price`, `region`. There's no fixed structure upfront.
 
-### Steps
+**My approach:** Store each JSON record as a `TEXT` string in a single `dataset_records` table, tagged with a `dataset_name` column. At query time, deserialize each record into a `Map<String, Object>`, then apply Group-By or Sort-By dynamically using Java Streams.
 
-```bash
-# 1. Clone / navigate to project
-cd dataset-api
+This avoids needing a separate table per dataset, and no schema migrations are needed when a new dataset type is introduced.
 
-# 2. Build the project
-mvn clean install
+One non-obvious problem I had to solve: **sorting numbers stored in JSON**. Jackson deserializes `{"age": 30}` as an `Integer`, but if you sort using string comparison, `"9"` sorts after `"30"` alphabetically. I wrote a type-aware `Comparator` that checks if values are `instanceof Number` and compares them numerically, falling back to string comparison otherwise.
 
-# 3. Run the application
-mvn spring-boot:run
+---
+
+## 🏗️ Architecture
+
+```
+HTTP Request
+     │
+     ▼
+┌─────────────────────┐
+│  DatasetController  │  ← Routing, HTTP status codes, request parsing only
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│  DatasetService     │  ← All business logic (interface + impl)
+│  (interface)        │    Group-By via Collectors.groupingBy()
+│  DatasetServiceImpl │    Sort-By via type-aware Comparator
+└─────────┬───────────┘
+          │
+          ▼
+┌──────────────────────────┐
+│  DatasetRecordRepository │  ← Spring Data JPA (zero SQL written)
+└─────────┬────────────────┘
+          │
+          ▼
+┌─────────────────┐
+│   H2 Database   │  ← In-memory, auto-configured, no setup needed
+└─────────────────┘
 ```
 
-The app starts on **http://localhost:8080**
-
-### Useful URLs after startup:
-| URL | Purpose |
-|-----|---------|
-| http://localhost:8080/swagger-ui.html | Interactive API docs |
-| http://localhost:8080/h2-console | Database viewer (JDBC URL: `jdbc:h2:mem:datasetdb`) |
-| http://localhost:8080/api-docs | Raw OpenAPI spec (JSON) |
+**Layers are intentionally thin.** The controller doesn't know about the database. The repository doesn't know about business rules. Each layer has one job.
 
 ---
 
@@ -39,63 +53,100 @@ The app starts on **http://localhost:8080**
 ```
 src/
 ├── main/java/com/assignment/datasetapi/
-│   ├── DatasetApiApplication.java     ← Main entry point
+│   ├── DatasetApiApplication.java          ← Entry point
 │   ├── config/
-│   │   └── AppConfig.java             ← Bean config (ObjectMapper, Swagger)
+│   │   └── AppConfig.java                  ← ObjectMapper bean, Swagger config
 │   ├── controller/
-│   │   └── DatasetController.java     ← REST endpoints
+│   │   └── DatasetController.java          ← REST endpoints (thin layer)
 │   ├── dto/
-│   │   ├── InsertRecordRequest.java   ← Dynamic JSON request body
-│   │   ├── InsertRecordResponse.java  ← Insert response shape
-│   │   ├── QueryParams.java           ← Query parameter holder
-│   │   └── QueryResponse.java        ← Group/sort response shape
+│   │   ├── InsertRecordRequest.java        ← Accepts any JSON via @JsonAnySetter
+│   │   ├── InsertRecordResponse.java       ← Insert confirmation response
+│   │   ├── QueryParams.java                ← Encapsulates groupBy/sortBy/order
+│   │   └── QueryResponse.java             ← Returns groupedRecords OR sortedRecords
 │   ├── exception/
-│   │   ├── DatasetNotFoundException.java
-│   │   ├── InvalidQueryException.java
-│   │   ├── InvalidRecordException.java
-│   │   └── GlobalExceptionHandler.java ← Centralized error handling
+│   │   ├── DatasetNotFoundException.java   ← 404
+│   │   ├── InvalidQueryException.java      ← 400 for bad query params
+│   │   ├── InvalidRecordException.java     ← 400 for bad request body
+│   │   └── GlobalExceptionHandler.java    ← @RestControllerAdvice catches all exceptions
 │   ├── model/
-│   │   └── DatasetRecord.java         ← JPA entity (DB table)
+│   │   └── DatasetRecord.java              ← JPA entity → dataset_records table
 │   ├── repository/
-│   │   └── DatasetRecordRepository.java ← Database operations
+│   │   └── DatasetRecordRepository.java    ← Spring Data JPA interface
 │   └── service/
-│       ├── DatasetService.java        ← Service interface
-│       └── DatasetServiceImpl.java    ← Business logic
+│       ├── DatasetService.java             ← Interface (contract)
+│       └── DatasetServiceImpl.java         ← Implementation (business logic)
 └── test/java/com/assignment/datasetapi/
     ├── controller/
-    │   └── DatasetControllerTest.java ← MockMvc HTTP tests
+    │   └── DatasetControllerTest.java      ← @WebMvcTest + MockMvc (HTTP layer)
     └── service/
-        └── DatasetServiceImplTest.java ← Unit tests with Mockito
+        └── DatasetServiceImplTest.java     ← Mockito unit tests (business logic)
 ```
+
+---
+
+## 🚀 How to Run
+
+### Prerequisites
+- Java 17+
+- Maven 3.6+
+
+```bash
+# Verify your setup
+java -version   # should show 17+
+mvn -version    # should show 3.6+
+```
+
+### Clone & Run
+
+```bash
+git clone https://github.com/TejasYogesh/dataset-api.git
+cd dataset-api
+
+# Build and run tests
+mvn clean install
+
+# Start the application
+mvn spring-boot:run
+```
+
+App starts on **`http://localhost:8080`**
+
+### URLs Available After Startup
+
+| URL | What it is |
+|-----|-----------|
+| `http://localhost:8080/swagger-ui.html` | Interactive API docs — try endpoints directly here |
+| `http://localhost:8080/h2-console` | Browser DB viewer to inspect stored records live |
+| `http://localhost:8080/api-docs` | Raw OpenAPI JSON spec |
+
+> **H2 Console login:** JDBC URL = `jdbc:h2:mem:datasetdb`, Username = `sa`, Password = *(leave blank)*
 
 ---
 
 ## 🧪 Running Tests
 
 ```bash
-# Run all tests
 mvn test
-
-# Run with test report
-mvn test surefire-report:report
 ```
+
+Tests are split into two files intentionally:
+
+- **`DatasetServiceImplTest`** — Pure unit tests. The repository is mocked with Mockito. Tests business logic in complete isolation from the database.
+- **`DatasetControllerTest`** — Uses `@WebMvcTest` + `MockMvc` to simulate real HTTP requests. Tests routing, HTTP status codes, and JSON response structure. The service is mocked so only the HTTP layer is under test.
 
 ---
 
 ## 📋 API Reference
 
-### 1. Insert Record
+### POST `/api/dataset/{datasetName}/record`
 
-**`POST /api/dataset/{datasetName}/record`**
+Inserts a JSON record into the named dataset. Accepts **any** JSON object — no fixed schema required.
 
-Inserts a JSON record into the named dataset. The JSON body is schema-free — any fields are accepted.
-
-#### Request
-```
+**Request**
+```http
 POST /api/dataset/employee_dataset/record
 Content-Type: application/json
-```
-```json
+
 {
   "id": 1,
   "name": "John Doe",
@@ -104,7 +155,7 @@ Content-Type: application/json
 }
 ```
 
-#### Response — `201 Created`
+**Response — `201 Created`**
 ```json
 {
   "message": "Record added successfully",
@@ -113,33 +164,35 @@ Content-Type: application/json
 }
 ```
 
-#### Error Responses
-| Status | When |
-|--------|------|
-| 400 | Empty request body |
-| 400 | Malformed JSON |
-| 500 | Unexpected server error |
+> If your JSON has an `"id"` field, that value is returned as `recordId`. If not, the auto-generated database ID is used.
+
+**Error cases**
+
+| Status | Reason |
+|--------|--------|
+| `400` | Empty request body `{}` |
+| `400` | Body is not valid JSON |
+| `400` | Dataset name is blank |
 
 ---
 
-### 2. Query Records — Group By
+### GET `/api/dataset/{datasetName}/query`
 
-**`GET /api/dataset/{datasetName}/query?groupBy={field}`**
+Queries records from a dataset. Provide **exactly one** of `groupBy` or `sortBy`.
 
-Groups all records in the dataset by the value of the specified field.
+#### Group By
 
-#### Request
-```
+```http
 GET /api/dataset/employee_dataset/query?groupBy=department
 ```
 
-#### Response — `200 OK`
+**Response — `200 OK`**
 ```json
 {
   "groupedRecords": {
     "Engineering": [
-      { "id": 1, "name": "John Doe", "age": 30, "department": "Engineering" },
-      { "id": 2, "name": "Jane Smith", "age": 25, "department": "Engineering" }
+      { "id": 1, "name": "John Doe",    "age": 30, "department": "Engineering" },
+      { "id": 2, "name": "Jane Smith",  "age": 25, "department": "Engineering" }
     ],
     "Marketing": [
       { "id": 3, "name": "Alice Brown", "age": 28, "department": "Marketing" }
@@ -148,105 +201,127 @@ GET /api/dataset/employee_dataset/query?groupBy=department
 }
 ```
 
----
+#### Sort By
 
-### 3. Query Records — Sort By
-
-**`GET /api/dataset/{datasetName}/query?sortBy={field}&order={asc|desc}`**
-
-Sorts all records by the specified field. Handles both numeric and string fields correctly.
-
-#### Request
-```
+```http
 GET /api/dataset/employee_dataset/query?sortBy=age&order=asc
 ```
 
-#### Response — `200 OK`
+**Response — `200 OK`**
 ```json
 {
   "sortedRecords": [
-    { "id": 2, "name": "Jane Smith", "age": 25, "department": "Engineering" },
-    { "id": 3, "name": "Alice Brown", "age": 28, "department": "Marketing" },
-    { "id": 1, "name": "John Doe", "age": 30, "department": "Engineering" }
+    { "id": 2, "name": "Jane Smith",  "age": 25, "department": "Engineering" },
+    { "id": 3, "name": "Alice Brown", "age": 28, "department": "Marketing"   },
+    { "id": 1, "name": "John Doe",    "age": 30, "department": "Engineering" }
   ]
 }
 ```
 
-#### Error Responses
-| Status | When |
-|--------|------|
-| 400 | Neither `groupBy` nor `sortBy` provided |
-| 400 | Both `groupBy` AND `sortBy` provided |
-| 400 | `order` is not `asc` or `desc` |
-| 400 | Specified field doesn't exist in the dataset |
-| 404 | Dataset has no records |
+**Query Parameters**
+
+| Parameter | Required | Values | Description |
+|-----------|----------|--------|-------------|
+| `groupBy` | One of these two | Any field name | Groups records by that field's value |
+| `sortBy`  | One of these two | Any field name | Sorts records by that field |
+| `order`   | No (default: `asc`) | `asc` / `desc` | Sort direction |
+
+**Error cases**
+
+| Status | Reason |
+|--------|--------|
+| `400` | Neither `groupBy` nor `sortBy` provided |
+| `400` | Both `groupBy` and `sortBy` provided together |
+| `400` | `order` is not `asc` or `desc` |
+| `400` | Specified field doesn't exist — error message lists available fields |
+| `404` | No records found for this dataset name |
 
 ---
 
-## 🔬 Postman Testing Guide
+### Error Response Format
 
-### Step 1: Insert sample records
+All errors return a consistent structure regardless of where they occur:
 
-Run these 3 POST requests first:
+```json
+{
+  "status": 404,
+  "error": "Not Found",
+  "message": "Dataset not found: 'unknown_dataset'. No records exist for this dataset.",
+  "timestamp": "2024-01-15T10:30:00.123"
+}
+```
 
-**Employee 1:**
+---
+
+## 🔬 Postman Testing — Full Flow
+
+### Step 1 — Insert records
+
 ```
 POST http://localhost:8080/api/dataset/employee_dataset/record
-Body: {"id":1,"name":"John Doe","age":30,"department":"Engineering"}
-```
+Body: { "id": 1, "name": "John Doe",    "age": 30, "department": "Engineering" }
 
-**Employee 2:**
-```
 POST http://localhost:8080/api/dataset/employee_dataset/record
-Body: {"id":2,"name":"Jane Smith","age":25,"department":"Engineering"}
-```
+Body: { "id": 2, "name": "Jane Smith",  "age": 25, "department": "Engineering" }
 
-**Employee 3:**
-```
 POST http://localhost:8080/api/dataset/employee_dataset/record
-Body: {"id":3,"name":"Alice Brown","age":28,"department":"Marketing"}
+Body: { "id": 3, "name": "Alice Brown", "age": 28, "department": "Marketing"   }
 ```
 
-### Step 2: Test Group By
+### Step 2 — Group by department
 ```
 GET http://localhost:8080/api/dataset/employee_dataset/query?groupBy=department
 ```
+Expected: two groups — `Engineering` (2 records) and `Marketing` (1 record)
 
-### Step 3: Test Sort By (ascending)
+### Step 3 — Sort by age ascending
 ```
 GET http://localhost:8080/api/dataset/employee_dataset/query?sortBy=age&order=asc
 ```
+Expected order: Jane (25) → Alice (28) → John (30)
 
-### Step 4: Test Sort By (descending)
+### Step 4 — Sort by name descending
 ```
 GET http://localhost:8080/api/dataset/employee_dataset/query?sortBy=name&order=desc
 ```
+Expected order: John → Jane → Alice
 
-### Step 5: Test error cases
+### Step 5 — Test error handling
 ```
-# 404 - Dataset not found
-GET http://localhost:8080/api/dataset/nonexistent/query?groupBy=department
+# 404 — dataset doesn't exist
+GET http://localhost:8080/api/dataset/unknown/query?groupBy=department
 
-# 400 - Field doesn't exist
+# 400 — field doesn't exist in the dataset
 GET http://localhost:8080/api/dataset/employee_dataset/query?groupBy=salary
 
-# 400 - No params
+# 400 — no query params at all
 GET http://localhost:8080/api/dataset/employee_dataset/query
+
+# 400 — both params provided at once
+GET http://localhost:8080/api/dataset/employee_dataset/query?groupBy=department&sortBy=age
 ```
 
 ---
 
-## 🏗️ Design Decisions
+## 🏗️ Key Design Decisions
 
-| Decision | Reason |
-|----------|--------|
-| Schema-free JSON stored as TEXT | Records can have any structure; storing as string gives flexibility |
-| Service Interface + Impl | Loose coupling; easy to mock in tests; follows Dependency Inversion |
-| `@JsonInclude(NON_NULL)` on QueryResponse | Cleaner API: `groupedRecords` absent from response when doing sortBy, and vice versa |
-| Numeric-aware comparator | Prevents string-sort of numbers ("25" > "9" but numerically 9 < 25) |
-| `LinkedHashMap` for group results | Preserves insertion order in grouped output |
-| Global `@RestControllerAdvice` | Centralized error handling; no try-catch in controllers |
-| Constructor injection | Preferred over `@Autowired` on fields; makes dependencies explicit and testable |
+**Schema-free storage as JSON TEXT**
+Each record is stored as a raw JSON string in a single `TEXT` column. This means any dataset shape is supported without creating new tables or writing migrations. The trade-off is that group/sort operations happen in-memory after fetching — acceptable here, and honest about the limitation.
+
+**Service Interface + Implementation**
+`DatasetService` is an interface; `DatasetServiceImpl` is the only implementation. The controller depends on the abstraction, not the concrete class (Dependency Inversion). This also makes the service trivially mockable in tests with `@MockBean`.
+
+**Type-aware Sort Comparator**
+Jackson deserializes JSON numbers as `Integer`/`Long`/`Double`. The comparator detects `instanceof Number` and compares numerically, falling back to case-insensitive string comparison. Without this, `[30, 9, 25]` would sort lexicographically to `[25, 30, 9]` — incorrect.
+
+**`@JsonInclude(NON_NULL)` on QueryResponse**
+`QueryResponse` has two fields: `groupedRecords` and `sortedRecords`. Only one is populated per request. `NON_NULL` keeps the unused field completely out of the JSON response rather than returning `"sortedRecords": null`.
+
+**Centralized Exception Handling**
+`GlobalExceptionHandler` with `@RestControllerAdvice` catches all exceptions application-wide and formats them into a consistent error body. No try-catch blocks in controllers or services — failures bubble up and are handled in one place.
+
+**Constructor Injection over `@Autowired` fields**
+All dependencies injected via constructor using Lombok's `@RequiredArgsConstructor`. Makes dependencies explicit, prevents null injection in tests, and avoids accidental circular dependencies.
 
 ---
 
@@ -256,7 +331,7 @@ GET http://localhost:8080/api/dataset/employee_dataset/query
 CREATE TABLE dataset_records (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     dataset_name VARCHAR(255) NOT NULL,
-    record_data  TEXT NOT NULL,
+    record_data  TEXT         NOT NULL,
     created_at   TIMESTAMP
 );
 
