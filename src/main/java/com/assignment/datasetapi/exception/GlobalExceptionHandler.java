@@ -13,23 +13,18 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * ✅ WHAT IS THIS?
- * A Global Exception Handler using Spring's @RestControllerAdvice.
  *
- * ✅ HOW IT WORKS:
+ * HOW IT WORKS:
  * Instead of wrapping every controller method in try-catch blocks,
  * we centralize ALL exception handling here.
  *
  * When ANY exception is thrown anywhere in the app, Spring automatically
  * calls the matching @ExceptionHandler method here.
  *
- * ✅ DESIGN PATTERN: Centralized Error Handling (AOP-style cross-cutting concern)
+ * DESIGN PATTERN: Centralized Error Handling (AOP-style cross-cutting concern)
+
  *
- * ✅ WHY @RestControllerAdvice?
- * = @ControllerAdvice + @ResponseBody
- * Means: "Apply this advice to all controllers, and return JSON responses"
- *
- * ✅ @Slf4j (from Lombok): gives us a `log` object for logging without boilerplate
+ * @Slf4j (from Lombok): gives us a `log` object for logging without boilerplate
  */
 @RestControllerAdvice
 @Slf4j

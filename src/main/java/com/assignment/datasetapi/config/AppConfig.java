@@ -23,10 +23,10 @@ public class AppConfig {
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
 
-        // ✅ Support for Java 8 date/time types (LocalDateTime, LocalDate, etc.)
+        //  Support for Java 8 date/time types (LocalDateTime, LocalDate, etc.)
         mapper.registerModule(new JavaTimeModule());
 
-        // ✅ Don't serialize dates as timestamps (use ISO format instead)
+        // Don't serialize dates as timestamps (use ISO format instead)
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         return mapper;
