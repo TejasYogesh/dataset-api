@@ -12,6 +12,10 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 /**
  *
  * HOW IT WORKS:
@@ -29,6 +33,7 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // ─────────────────────────────────────────────────────────────
     // 404 NOT FOUND
@@ -57,7 +62,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * ✅ Handles malformed JSON in request body
+     * Handles malformed JSON in request body
      * e.g., sending "not json" as the body to the insert API
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -68,7 +73,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * ✅ Handles type mismatch in path variables or query params
+     * Handles type mismatch in path variables or query params
      * e.g., passing a non-numeric value where a number is expected
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

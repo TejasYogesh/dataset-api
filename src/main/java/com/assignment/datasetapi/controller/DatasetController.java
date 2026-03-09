@@ -4,6 +4,7 @@ import com.assignment.datasetapi.dto.InsertRecordRequest;
 import com.assignment.datasetapi.dto.InsertRecordResponse;
 import com.assignment.datasetapi.dto.QueryParams;
 import com.assignment.datasetapi.dto.QueryResponse;
+import com.assignment.datasetapi.exception.GlobalExceptionHandler;
 import com.assignment.datasetapi.service.DatasetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,15 +19,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @RequestMapping("/api/dataset")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Dataset API", description = "APIs for inserting and querying JSON dataset records")
 public class DatasetController {
+     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // ✅ Injected via constructor — depends on INTERFACE, not implementation (SOLID)
     private final DatasetService datasetService;
+
+    public DatasetController() {
+        this.datasetService = null;
+    }
     @PostMapping("/{datasetName}/record")
     @Operation(
         summary = "Insert a JSON record into a dataset",

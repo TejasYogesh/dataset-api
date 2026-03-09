@@ -94,7 +94,7 @@
             </plugin>
 
             <!--
-                ✅ FIX FOR "cannot find symbol builder()" IN VS CODE
+                FIX FOR "cannot find symbol builder()" IN VS CODE
                 This explicitly tells the Java compiler to run Lombok's
                 annotation processor, which generates the builder() method,
                 getters, setters, etc. at compile time.
