@@ -4,10 +4,12 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.Builder;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 @Data
+@Builder
 public class InsertRecordRequest {
 
     /**

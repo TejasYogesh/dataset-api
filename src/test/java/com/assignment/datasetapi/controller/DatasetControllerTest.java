@@ -24,26 +24,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * ✅ CONTROLLER INTEGRATION TESTS using @WebMvcTest + MockMvc
- *
- * ✅ WHAT IS @WebMvcTest?
- * Loads ONLY the web layer (controllers, filters, etc.) — NOT the full app.
- * Much faster than @SpringBootTest for testing HTTP layer.
- *
- * ✅ WHAT IS MockMvc?
- * Simulates HTTP requests without starting a real HTTP server.
- * We can test request routing, status codes, and response JSON.
- *
- * ✅ @MockBean replaces the real DatasetService with a Mockito mock.
- * We control what the service returns so we can test controller behavior in isolation.
- *
- * ✅ TEST STRUCTURE: We test the HTTP layer here:
- * - Correct URL routing
- * - HTTP status codes (201, 200, 400, 404)
- * - Response JSON structure
- * - Error handling
- */
 @WebMvcTest(DatasetController.class)
 @DisplayName("DatasetController Integration Tests")
 class DatasetControllerTest {
